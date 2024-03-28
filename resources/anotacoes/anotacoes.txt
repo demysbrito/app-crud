@@ -1,0 +1,390 @@
+#Link do tutorial
+https://www.youtube.com/watch?v=_LA9QsgJ0bw
+
+
+#Criar o projeto
+composer create-project laravel/laravel app-crud
+
+
+#Rodar o projeto
+php artisan serve
+
+
+#Criar o banco de dados do projeto (Ex: app-crud)
+
+
+#Editar o arquivo .env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=app-crud
+DB_USERNAME=root
+DB_PASSWORD=
+
+
+#Rodar as migrations do projeto
+php artisan migrate
+
+
+#Criando uma migration (database > migrations > xxxxx_create_products_table.php)
+php artisan make:migration create_products_table
+
+
+#Atualizar o código da função "up"
+public function up(): void
+    {
+        Schema::create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->integer('qty');
+            $table->decimal('price',8,2);
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+    }
+
+
+#Executar as migrations novamente
+php artisan migrate
+
+
+#Criar a Model (normalmente com o mesmo nome da tabela no singular)
+#app > Models > Product.php
+php artisan make:model Product
+
+
+#Criar o array $fillable, com os campos que serão preenchidos na tabela do banco pelo usuário
+//Nomes dos campos da tabela que serão preenchidos pelo usuário, ex: name, qty, price e description
+    protected $fillable = [
+        'name',
+        'qty',
+        'price',
+        'description'
+    ];
+
+
+#Criar o Controller
+#app > Http > Controller > ProductController
+php artisan make:controller ProductController
+
+
+#Criar a view dos produtos
+#Criar uma pasta "products" em views
+#Criar o arquivo index.blade.php
+
+
+
+#Criar a rota para a view do produto (routes > web.php)
+Route::get('/product', [ProductController::class, 'index'])->name('product.index');
+
+#Importar a classe ProductController
+use App\Http\Controllers\ProductController;
+
+
+#Criar a função index no ProductController
+public function index() {
+        return view('products.index');
+}
+
+#Criar a rota para o cadastro de produtos (em web.php)
+Route::get('/product/create', [ProductController::class, 'create'])->name('product.create');
+
+
+#Criar a função create no ProductController
+public function create() {
+        return view('products.create');
+}
+
+
+#Criar a view do cadastro dos produtos
+#Na pasta "products" em views
+#Criar o arquivo create.blade.php
+#Criar o formulário de cadastro de produtos
+
+
+<h1>Cadastrar um produto</h1>
+    <div>
+        @if($errors->any())
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{$error}}</li>
+            @endforeach
+        </ul>
+        @endif
+    </div>
+
+    <form method="post" action="">
+    @csrf
+    @method('post')
+        <div class="mb-3">
+            <label for="name" class="form-label">Nome</label>
+            <input type="text" class="form-control" name="name" placeholder="Nome">
+        </div>
+        <div class="row mb-3">
+            <div class="col mb-3">
+                <label for="qty" class="form-label">Quantidade</label>
+                <input type="number" name="qty" placeholder="Quantidade" class="form-control">
+            </div>
+            <div class="col mb-3">
+                <label for="price" class="form-label">Preço</label>
+                <!-- <input type="text" class="form-control" name="price" > -->
+                <input type="text" class="form-control" id="money" name="price">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Descrição</label>
+            <input type="text" class="form-control" name="description" placeholder="Descrição">
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+
+
+
+#Criar a rota POST para efetuar o cadastro (em web.php)
+Route::post('/product', [ProductController::class, 'store'])->name('product.store');
+
+
+#Criar a função store no ProductController
+public function store(Request $request) {
+        $data = $request->validate([
+            'name' => 'required|string',
+            'qty' => 'required|numeric',
+            'price' => 'required|numeric:2',
+            'description' => 'nullable',
+        ]);
+
+        $newProduct = Product::create($data);
+       
+        return redirect(route('product.index'));
+    }
+
+
+#Atualizar a action do form no create.blade.php
+<form method="post" action="{{route('product.store')}}">
+
+#Importar a Model Product em ProductController
+
+#Testar o cadastro do produto
+
+#Incluir a lista de produtos no index de produtos
+#Atualizar a função index no Product Controller
+
+public function index() {
+        $products = Product::all();
+        return view('products.index', ['products' => $products]);
+        
+    }
+
+
+#Atualizar o arquivo view > products > index.blade.php para mostrar od produtos
+
+@extends('layouts.master')
+@section('content')
+
+<h1>Produtos</h1>
+<a class="btn btn-primary" href="{{route('product.create')}}" role="button">Cadastrar</a>
+<div>
+    @if(session()->has('success'))
+        <div>
+            {{session('success')}}
+        </div>
+    @endif
+</div>
+<table class="table">
+    <thead>
+        <tr>
+        <th scope="col">#</th>
+        <th scope="col">Nome</th>
+        <th scope="col">Qtd</th>
+        <th scope="col">Preço</th>
+        <th scope="col">Descrição</th>
+        <th scope="col" colspan="2" class="text-center">Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($products as $product)
+        <tr>
+            <td>{{$product->id}}</td>
+            <td>{{$product->name}}</td>
+            <td>{{$product->qty}}</td>
+            <td>R$ {{$product->price}}</td>
+            <td>{{$product->description}}</td>
+            <td><a class="btn btn-warning"  role="button">Editar</a></td>
+            <td>
+                <form method="post" >
+                    @csrf
+                    @method('delete')
+                    <input type="submit" value="Excluir" class="btn btn-danger">
+                </form>
+            </td>
+        </tr>
+        @endforeach
+        
+    </tbody>
+</table>
+@endsection    
+
+
+#Implementar a rota de edição de produto (web.php)
+Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
+
+#Criar a função edit no ProductController
+public function edit(Product $product) {
+        // dd($product);
+        return view('products.edit', ['product' => $product]);
+}
+
+
+#Atualizar na index do produto, o link para a edição do mesmo
+<td><a class="btn btn-warning" href="{{route('product.edit', ['product' => $product])}}"  role="button">Editar</a></td>
+
+
+#Criar a view de edição de Produto (views > products > edit.blade.php)
+    <h1>Editar um produto</h1>
+    
+    <div>
+        @if($errors->any())
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{$error}}</li>
+            @endforeach
+        </ul>
+        @endif
+    </div>
+
+    <form method="post" action="">
+    @csrf
+    @method('put')
+        <div class="mb-3">
+            <label for="name" class="form-label">Nome</label>
+            <input type="text" class="form-control" name="name" placeholder="Nome" value="{{$product->name}}">
+        </div>
+        <div class="row mb-3">
+            <div class="col mb-3">
+                <label for="qty" class="form-label">Quantidade</label>
+                <input type="number" name="qty" placeholder="Quantidade" class="form-control" value="{{$product->qty}}">
+            </div>
+            <div class="col mb-3">
+                <label for="price" class="form-label">Preço</label>
+                <!-- <input type="text" class="form-control" name="price" > -->
+                <input type="text" class="form-control" id="money" name="price" value="{{$product->price}}">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Descrição</label>
+            <input type="text" class="form-control" name="description" placeholder="Descrição" value="{{$product->description}}">
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+
+#Criar a função edit no ProductController
+public function edit(Product $product) {
+    // dd($product);
+    return view('products.edit', ['product' => $product]);
+}
+
+
+#Criar a rota de edição (web.php)
+Route::put('/product/{product}/update', [ProductController::class, 'update'])->name('product.update');
+
+#Criar a função de update no ProductController
+public function update(Product $product, Request $request) {
+    $data = $request->validate([
+        'name' => 'required|string',
+        'qty' => 'required|numeric',
+        'price' => 'required|numeric:2',
+        'description' => 'nullable',
+    ]);
+
+    $product->update($data);
+
+    return redirect(route('product.index'))->with('success', 'Produto editado com sucesso!');
+}
+
+
+#Inserir a action no form da view edit.blade.php
+<form method="post" action="{{route('product.update', ['product' => $product])}}"> 
+
+
+#Criar o botão de deletar o produto (index.blade.php)
+<td>
+    <form method="post" action="{{route('product.destroy', ['product' => $product])}}">
+        @csrf
+        @method('delete')
+        <input type="submit" value="Excluir" class="btn btn-danger">
+    </form>
+</td>
+
+
+#Criar uma rota para deletar o produto (web.php)
+Route::delete('/product/{product}/destroy', [ProductController::class, 'destroy'])->name('product.destroy');
+
+
+#Criar a função destroy no ProductController
+public function destroy(Product $product) {
+    $product->delete();
+    return redirect(route('product.index'))->with('success', 'Produto excluído  com sucesso!');
+}
+
+
+---------------------------------------------------------------
+
+#Adicionar um campo novo ao formulário
+#Adicionar o campo no formulário de cadastro de produto
+<div class="col mb-3">
+    <label for="condition" class="form-label">Condição</label>
+    <select class="form-select" aria-label="Condição">
+        <option value="novo" selected>Novo</option>
+        <option value="usado">Usado</option>
+    </select>
+</div>
+
+
+#Criar uma migration para ele
+php artisan make:migration add_condition_to_products --table=products
+
+#Editar a migration
+public function up(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->string('condition');
+    });
+}
+
+public function down(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->dropColumn('condition');
+    });
+}
+
+
+#Executar a migration
+php artisan migrate
+
+
+#Editar a Model
+protected $fillable = [
+    'name',
+    'qty',
+    'price',
+    'condition',
+    'description'
+];
+
+#Editar no ProductController os métodos store e update
+public function store(Request $request) {
+    $data = $request->validate([
+        'name' => 'required|string',
+        'qty' => 'required|numeric',
+        'price' => 'required|numeric:2',
+        'condition' => 'required|string',
+        'description' => 'nullable',
+    ]);
+
+    $newProduct = Product::create($data);
+    
+    return redirect(route('product.index'));
+}
+
+
